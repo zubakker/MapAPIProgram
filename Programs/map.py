@@ -3,13 +3,16 @@ import sys
 import os
 
 
-def map_for_coords(coords, scale, tp):
+def map_for_coords(coords, scale, tp, flag):
     coords = str(coords[0]) + "," + str(coords[1])
     
     scale = 5 / scale
     response = None
     try:
+       
         map_request = "https://static-maps.yandex.ru/1.x/?&l={}&spn={},{}&ll=".format( tp, scale, scale )
+        if flag:
+            map_request = "https://static-maps.yandex.ru/1.x/?&l={}&pt={},pmdom&spn={},{}&ll=".format( tp, flag, scale, scale )        
         response = requests.get( map_request + coords )
      
         if not response:
