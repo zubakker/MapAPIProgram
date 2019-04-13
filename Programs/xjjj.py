@@ -130,6 +130,13 @@ while True:
     
             elif 580 <= x <= 600 and 430 <= y <= 450:
                 mail = 1 - mail
+                 
+            elif event.button == 1:
+                zy = str(COORDS[1] + (5 / SCALE) * (-2 * (y / 450) + 1) )
+                zx = str(COORDS[0] + 1.33 * (5 / SCALE) * (2 * (x / 600) - 1) )
+                print(zx, zy, x, y, SCALE)                
+                flag = zx + "," + zy
+
 
             map_for_coords(COORDS, SCALE, types[tp], flag)
     
