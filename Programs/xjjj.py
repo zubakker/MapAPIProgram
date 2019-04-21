@@ -3,14 +3,17 @@ import random
 import requests
 import sys
 import os
+from math import pi, tan, atan, e, log, degrees, radians
 
 
 from map import map_for_coords
 from coordinates import get_ll_span
+from find import addr_for_coords, org_for_coords
 
 
 COORDS = [0, 0]
-SCALE = 1.0
+SCALE = 1
+zoom = 1
 
 pygame.init()
 screen = pygame.display.set_mode((600, 450))
@@ -21,6 +24,25 @@ flag = None
 Font = pygame.font.SysFont("courier new", 20)
 font = pygame.font.SysFont("courier new", 14) 
 map_for_coords(COORDS, SCALE,"map", flag)
+
+zooms = { 0.5: 0,
+          1: 1,
+          2: 2,
+          4: 3,
+          8: 4,
+          16: 5,
+          32: 6,
+          64: 7,
+          128: 8,
+          256: 9,
+          512: 10,
+          1024: 11,
+          2048: 12,
+          4096: 13,
+          8192: 14,
+          16384: 15,
+          32768: 16,
+          65536: 17 }
 
 tp = 0
 types = ["map", "skl", "sat"]
@@ -38,6 +60,7 @@ keys = {102: "а", 44: "б", 100: "в", 117: "г", 48: "0", 54: "6",
         120: "ч", 105: "ш", 111: "щ", 93: "ъ", 32: " ",
         115: "ы", 109: "ь", 39: "э", 46: "ю", 122: "я"}
 active = False
+
 while True:
     
     for event in pygame.event.get():
@@ -48,35 +71,41 @@ while True:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_PAGEUP:
                 SCALE *= 2
-                if SCALE > 3000:
-                    SCALE = 3000
+                zoom += 1
+                if zoom > 17:
+                    zoom = 17
+                if SCALE > 65536:
+                    SCALE = 65536
             
             elif event.key == pygame.K_PAGEDOWN:
                 SCALE /= 2
-                if 2.5 / SCALE > abs(90 - COORDS[0]) or 2.5 / SCALE > abs(-90 - COORDS[0]) or \
-                   2.5 / SCALE > abs(180 - COORDS[1]) or 2.5 / SCALE > abs(-180 - COORDS[0]):
-                    SCALE = max(  2.5 / abs(90 - COORDS[0] - 0.00000001),
-                                  2.5 / abs(-90 - COORDS[0] - 0.00000001),
-                                  2.5 / abs(180 - COORDS[0] - 0.00000001),
-                                  2.5 / abs(-180 - COORDS[0] - 0.00000001) )
-                
+#                if 22.5 / SCALE > abs(90 - COORDS[0]) or 22.5 / SCALE > abs(-90 - COORDS[0]) or \
+ #                  22.5 / SCALE > abs(180 - COORDS[1]) or 22.5 / SCALE > abs(-180 - COORDS[0]):
+  #                  SCALE = max(  22.5 / abs(90 - COORDS[0] - 0.00000001),
+   #                               22.5 / abs(-90 - COORDS[0] - 0.00000001),
+    #                              22.5 / abs(180 - COORDS[0] - 0.00000001),
+     #                             22.5 / abs(-180 - COORDS[0] - 0.00000001) )
+                zoom -= 1
+                if zoom < 0:
+                    zoom = 0
+          
             elif event.key == pygame.K_LEFT:
-                COORDS[0] -= 5 / (3.1 * SCALE) + 180
+                COORDS[0] -= 45 / (3.1 * SCALE) + 180
                 COORDS[0] = COORDS[0] % 360 - 180
             
             elif event.key == pygame.K_RIGHT:
-                COORDS[0] += 5 / (3.1 * SCALE) + 180
+                COORDS[0] += 45 / (3.1 * SCALE) + 180
                 COORDS[0] = COORDS[0] % 360 - 180 
 
             elif event.key == pygame.K_DOWN:
-                COORDS[1] -= 5 / (3.1 * SCALE)
-                if 2.5 / SCALE > abs(-90 - COORDS[1]):
-                    COORDS[1] = -90 + 2.5 / SCALE
+                COORDS[1] -= 45 / (3.1 * SCALE)
+                if 22.5 / SCALE > abs(-90 - COORDS[1]):
+                    COORDS[1] = -90 + 22.5 / SCALE
 
             elif event.key == pygame.K_UP:
-                COORDS[1] += 5 / (3.1 * SCALE)
-                if 2.5 / SCALE > abs(90 - COORDS[1]):
-                    COORDS[1] = 90 + 2.5 / SCALE
+                COORDS[1] += 45 / (3.1 * SCALE)
+                if 22.5 / SCALE > abs(90 - COORDS[1]):
+                    COORDS[1] = 90 + 22.5 / SCALE
             
             elif event.key == pygame.K_BACKSPACE and adress and active:
                 adress = adress[:-1]
@@ -88,14 +117,19 @@ while True:
             elif event.key == pygame.K_RETURN:
                 a, b, c, d = get_ll_span(adress)
                 if a:
-                    COORDS, SCALE = a, 5 / float(b.split(",")[0])
+                    COORDS, SCALE = a, 45 / float(b.split(",")[0])
+
+                    SCALE = int(bin(int(SCALE))[:3] + "0" * ( len(bin(int(SCALE))) - 3 ), 2) * 4
+                    zoom = zooms[SCALE]
                     COORDS = [float(COORDS.split(",")[0]), float(COORDS.split(",")[1])]
+                    
                     full_adr = c
                     index = d
+                    flag = str(COORDS[0]) + "," + str(COORDS[1])
                 else:
                     full_adr = "Адрес не найден"
 
-            map_for_coords(COORDS, SCALE, types[tp], flag)
+            map_for_coords(COORDS, zoom, types[tp], flag)
         
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x, y = pygame.mouse.get_pos()
@@ -110,7 +144,12 @@ while True:
             elif 450 <= x <= 500 and 0 <= y <= 50:
                 a, b, c, d = get_ll_span(adress)
                 if a:
-                    COORDS, SCALE = a, 5 / float(b.split(",")[0])
+                    COORDS, SCALE = a, 45 / float(b.split(",")[0])
+
+                    SCALE = int(bin(int(SCALE))[:3] + "0" * ( len(bin(int(SCALE))) - 3 ), 2) * 4
+                    zoom = zooms[SCALE]
+                    COORDS = [float(COORDS.split(",")[0]), float(COORDS.split(",")[1])]
+                    
                     COORDS = [float(COORDS.split(",")[0]), float(COORDS.split(",")[1])]
                     full_adr = c
                     index = d
@@ -131,16 +170,49 @@ while True:
             elif 580 <= x <= 600 and 430 <= y <= 450:
                 mail = 1 - mail
                  
-            elif event.button == 1:
-                zy = str(COORDS[1] + (5 / SCALE) * (-2 * (y / 450) + 1) )
-                zx = str(COORDS[0] + 1.33 * (5 / SCALE) * (2 * (x / 600) - 1) )
-                print(zx, zy, x, y, SCALE)                
-                flag = zx + "," + zy
+            elif event.button == 1 and not active and 45 <= x <= 555:
+                Lam = radians(COORDS[0])
+                Fi = radians(COORDS[1])
+
+                zx = (256 / (2 * pi)) * (2 ** zoom) * (Lam + pi)
+                zy = (256 / (2 * pi)) * (2 ** zoom) * (pi - log( tan(pi/4 + Fi/2), e ) )
+                
+                x = (zx + x - 300) 
+                y = (zy + y - 225) 
+
+                lam = (2 * pi * x) / (256 * 2 ** zoom) - pi
+                fi = 2 * atan( e ** ( pi - (2 * pi * y) / (256 * 2 ** zoom) ) ) - pi/2
+                
+                flag = str(degrees(lam)) + "," + str(degrees(fi))
+                a, b = addr_for_coords(flag)
+                if a:
+                    full_adr = a
+                    index = b
+        
+            elif event.button == 3 and not active and 45 <= x <= 555:
+                Lam = radians(COORDS[0])
+                Fi = radians(COORDS[1])
+
+                zx = (256 / (2 * pi)) * (2 ** zoom) * (Lam + pi)
+                zy = (256 / (2 * pi)) * (2 ** zoom) * (pi - log( tan(pi/4 + Fi/2), e ) )
+                
+                x = (zx + x - 300) 
+                y = (zy + y - 225) 
+
+                lam = (2 * pi * x) / (256 * 2 ** zoom) - pi
+                fi = 2 * atan( e ** ( pi - (2 * pi * y) / (256 * 2 ** zoom) ) ) - pi/2
+                
+                flag = str(degrees(lam)) + "," + str(degrees(fi))
+                a = org_for_coords(flag, COORDS)
+                full_adr = a
 
 
-            map_for_coords(COORDS, SCALE, types[tp], flag)
+            map_for_coords(COORDS, zoom, types[tp], flag)
     
     screen.blit(pygame.image.load(map_file), (0, 0))
+
+    pygame.draw.rect(screen, (0, 0, 0), (0, 0, 44, 450))
+    pygame.draw.rect(screen, (0, 0, 0), (556, 0, 44, 450)) 
 
     pygame.draw.rect(screen, (255, 255, 255), (550, 0, 50, 49))
     pygame.draw.rect(screen, (0, 0, 0), (550, -1, 50, 50), 1)
@@ -174,6 +246,7 @@ while True:
     pygame.draw.rect(screen, (255, 255, 255), (580, 430, 20, 20))
     screen.blit(pygame.transform.scale(pygame.image.load("mail.png"), (18, 20)), (580, 430))
     pygame.draw.rect(screen, (0, 0, 0), (579, 430, 21, 21), 1)
+
     if mail:
         pygame.draw.line(screen, (255, 0, 0), (577, 453), (600, 431), 3)
     
